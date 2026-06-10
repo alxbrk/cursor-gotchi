@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.Python
+.env
+.venv/
+
+# Runtime state (personal — pet data, usage, tokens, logs)
+state.json
+usage.json
+*.log
+
+# Swift / Xcode build artifacts
+mac/.build/
+.build/
+*.xcodeproj
+DerivedData/
+
+# Built app bundles
+*.app
+
+# macOS
+.DS_Store
