@@ -1,15 +1,53 @@
 # Cursor Gotchi
 
-A Tamagotchi-style pet for Cursor that **feeds on your token usage**. Every prompt, completion, and agent turn nourishes your creature. Skip coding for too long and it gets hungry.
+A Tamagotchi-style pet for [Cursor](https://cursor.com) that **feeds on your token usage**. Every prompt, completion, and agent turn nourishes your creature. Skip coding for too long and it gets hungry.
 
 ```
   ⚡ Toko · Sparkite · Hatchling
-  (•ᴗ•) 
+  (•ᴗ•)
   /| |\
-   | |  
-Content  hunger ███████░  happy ██████░░
+   | |
+hunger ███████░  happy ██████░░
 fed 12.4k tokens  evolve 42% → 50.0k
 ```
+
+It lives in three places (use any or all):
+
+- **CLI status line** — a tiny pet line under your Cursor CLI prompt
+- **IDE canvas panel** — an animated pet dashboard beside chat
+- **macOS menu bar app** — an always-on pixel pet showing your live usage %
+
+---
+
+## Quick install
+
+```bash
+git clone https://github.com/alxbrk/cursor-gotchi.git ~/cursor-gotchi
+cd ~/cursor-gotchi
+./scripts/install.sh
+```
+
+This copies the package to `~/.cursor/token-gotchi/`, wires up the **CLI status line**, registers **Cursor hooks** for the canvas, and prints the optional menu bar app command.
+
+### Add the macOS menu bar app (recommended)
+
+```bash
+~/.cursor/token-gotchi/scripts/install_mac_app.sh
+```
+
+A real `.app` (no Python, no Dock icon) lands in **Applications → Cursor Gotchi** and starts on login. Click the menu bar pet to open the floating Tamagotchi panel.
+
+---
+
+## Requirements
+
+- **Python 3.9+** — core pet logic and CLI/canvas (standard library only)
+- **macOS 14+** and the **Swift toolchain** (Xcode Command Line Tools: `xcode-select --install`) — only for the native menu bar app
+- **Cursor** signed in on this machine — the menu bar app reads your usage % from Cursor's local database (read-only)
+
+> Your Cursor token is never stored or transmitted anywhere except to Cursor's own API to read your usage. Nothing is committed or logged. See [Privacy](#privacy).
+
+---
 
 ## How it works
 
@@ -42,53 +80,50 @@ Pick your starter (cosmetic for now — activity-based evolution coming in v2):
 | Shellite | 🔥 | Powered by terminal runs |
 | MCPite | 🔗 | Connects to everything |
 
-## IDE Canvas panel
+---
 
-Cursor Gotchi also has a **Canvas panel** for the IDE chat — a live pet dashboard beside your conversation.
+## Menu bar app
 
-After install, open `token-gotchi.canvas.tsx` (under `~/.cursor/projects/<your-project>/canvases/`) beside chat using the canvas picker.
-
-The panel shows a **Tamagotchi-style device** with pixel-art sprites, LCD vitals, and mood-based animations. Evolution changes the sprite; hunger and happiness change its expression.
-
-It **syncs automatically** via Cursor hooks on session start/end, after each agent response, and when an agent run stops. The CLI status line also pushes live updates to the canvas. Manual sync:
+The native app shows a pixel pet plus your **usage %** for the current billing period. Click it for a panel with the pet, a usage bar, and when your plan resets. The full dollar breakdown is available on hover.
 
 ```bash
-python3 ~/.cursor/token-gotchi/scripts/sync_canvas.py <<< '{}'
-```
-
-## Menu bar pet (macOS)
-
-### Native app (recommended)
-
-A **real macOS app** — no Python, no Dock icon. Pixel pet in the menu bar; click to open the Tamagotchi panel. Reads the same `state.json` Cursor hooks update.
-
-```bash
+# Install / update
 ~/.cursor/token-gotchi/scripts/install_mac_app.sh
+
+# Restart
+~/.cursor/token-gotchi/scripts/restart_menubar.sh
+
+# Stop
+launchctl bootout gui/$(id -u)/com.cursor.token-gotchi.menubar
 ```
 
-Open anytime from Spotlight or **Finder → Applications → Cursor Gotchi**
+Open anytime from Spotlight or **Finder → Applications → Cursor Gotchi**.
 
-Restart: `~/.cursor/token-gotchi/scripts/restart_menubar.sh`
-
-Stop: `launchctl bootout gui/$(id -u)/com.cursor.token-gotchi.menubar`
+> The app is built and signed locally (ad-hoc). The installer clears the quarantine attribute so Gatekeeper won't block your own build.
 
 ### Legacy Python menu bar
+
+A `rumps`-based alternative (requires `pip install rumps`):
 
 ```bash
 ~/.cursor/token-gotchi/scripts/install_menubar.sh
 ```
 
-## Install
+---
+
+## IDE canvas panel
+
+A live pet dashboard for the Cursor chat — a Tamagotchi-style device with pixel-art sprites, LCD vitals, and mood-based animations. Evolution changes the sprite; hunger and happiness change its expression.
+
+It **syncs automatically** via Cursor hooks (session start/end, after each agent response, and when a run stops). The CLI status line also pushes live updates.
+
+After install, open `token-gotchi.canvas.tsx` (under `~/.cursor/projects/<your-project>/canvases/`) beside chat using the canvas picker. Manual sync:
 
 ```bash
-git clone <this-repo> ~/cursor-gotchi
-cd ~/cursor-gotchi
-./scripts/install.sh
+python3 ~/.cursor/token-gotchi/scripts/sync_canvas.py <<< '{}'
 ```
 
-This copies the package to `~/.cursor/token-gotchi/` and configures `~/.cursor/cli-config.json` with the status line hook.
-
-Requires **Python 3.9+** (stdlib only for core; menu bar pet needs `pip install rumps`).
+---
 
 ## CLI commands
 
@@ -109,7 +144,7 @@ python3 ~/.cursor/token-gotchi/scripts/gotchi.py feed 5000
 python3 ~/.cursor/token-gotchi/scripts/gotchi.py reset
 ```
 
-## Test the status line locally
+### Test the status line locally
 
 ```bash
 echo '{
@@ -125,9 +160,31 @@ echo '{
 
 Run it again with higher token counts to watch your pet eat.
 
-## State
+---
 
-Pet data lives at `~/.cursor/token-gotchi/state.json`.
+## Privacy
+
+- **No telemetry.** Cursor Gotchi sends nothing to any third party.
+- **Token handling.** The menu bar app reads your Cursor access token **read-only** from Cursor's local database (`state.vscdb`) solely to call Cursor's own usage API. It is never written to disk by this app.
+- **Local state only.** Pet data lives at `~/.cursor/token-gotchi/state.json`; cached usage at `~/.cursor/token-gotchi/usage.json`. These are git-ignored and never leave your machine.
+
+---
+
+## Uninstall
+
+```bash
+# Menu bar app + LaunchAgent
+launchctl bootout gui/$(id -u)/com.cursor.token-gotchi.menubar 2>/dev/null
+rm -f ~/Library/LaunchAgents/com.cursor.token-gotchi.menubar.plist
+rm -rf "/Applications/Cursor Gotchi.app"
+
+# Package + state
+rm -rf ~/.cursor/token-gotchi
+```
+
+Then remove the `statusLine` block from `~/.cursor/cli-config.json` and the Cursor Gotchi entries from `~/.cursor/hooks.json` if you no longer want the CLI/canvas integration.
+
+---
 
 ## Roadmap
 
@@ -137,6 +194,8 @@ Pet data lives at `~/.cursor/token-gotchi/state.json`.
 - [ ] **Achievements** — "Fed 1M tokens", "7-day streak", "Shell master"
 - [ ] **Multi-pet daycare** — one pet per workspace
 - [ ] **Battle/trade** — share gotchi stats with teammates
+
+---
 
 ## License
 
