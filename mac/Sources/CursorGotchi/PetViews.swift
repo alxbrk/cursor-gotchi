@@ -1,5 +1,56 @@
 import SwiftUI
 
+/// Adaptive colors for the panel so it looks right in both light and dark mode.
+struct PanelTheme {
+    let isDark: Bool
+
+    var panelBackground: Color {
+        isDark ? Color(red: 0.16, green: 0.16, blue: 0.16) : Color(white: 0.98)
+    }
+    var cardBackground: Color {
+        isDark ? Color(white: 0.12) : Color(white: 0.93)
+    }
+    var primaryText: Color {
+        isDark ? .white : Color(white: 0.10)
+    }
+    var secondaryText: Color {
+        isDark ? Color(white: 0.62) : Color(white: 0.38)
+    }
+    var labelText: Color {
+        isDark ? Color(white: 0.72) : Color(white: 0.32)
+    }
+    var tertiaryText: Color {
+        isDark ? Color(white: 0.45) : Color(white: 0.52)
+    }
+    var faintText: Color {
+        isDark ? Color(white: 0.40) : Color(white: 0.58)
+    }
+    var mutedText: Color {
+        isDark ? Color(white: 0.50) : Color(white: 0.45)
+    }
+    var trackColor: Color {
+        isDark ? Color(white: 0.22) : Color(white: 0.83)
+    }
+    var buttonText: Color {
+        isDark ? Color(white: 0.82) : Color(white: 0.22)
+    }
+    func buttonBackground(hovering: Bool) -> Color {
+        isDark
+            ? Color(white: hovering ? 0.26 : 0.18)
+            : Color(white: hovering ? 0.85 : 0.90)
+    }
+    var spriteOutline: Color {
+        isDark ? Color(white: 0.88) : Color(red: 0.16, green: 0.16, blue: 0.16)
+    }
+    var spriteMouth: Color {
+        isDark ? Color(white: 0.55) : Color(red: 0.29, green: 0.19, blue: 0.19)
+    }
+
+    static func from(_ scheme: ColorScheme) -> PanelTheme {
+        PanelTheme(isDark: scheme == .dark)
+    }
+}
+
 enum SpriteBounds {
     static func of(_ rows: [String]) -> (minX: Int, minY: Int, maxX: Int, maxY: Int)? {
         var minX = Int.max
@@ -111,6 +162,8 @@ struct StatBar: View {
     let label: String
     let value: Double
     let tint: Color
+    @Environment(\.colorScheme) private var colorScheme
+    private var theme: PanelTheme { .from(colorScheme) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -120,12 +173,12 @@ struct StatBar: View {
                 Text("\(Int(value.rounded()))")
             }
             .font(.system(size: 11, weight: .medium, design: .monospaced))
-            .foregroundStyle(Color(white: 0.72))
+            .foregroundStyle(theme.labelText)
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Color(white: 0.22))
+                        .fill(theme.trackColor)
                     RoundedRectangle(cornerRadius: 4)
                         .fill(tint)
                         .frame(width: geo.size.width * CGFloat(min(100, max(0, value)) / 100))
@@ -141,6 +194,8 @@ struct PetPanelView: View {
     @ObservedObject var usageStore: UsageStore
     var onRefresh: () -> Void = {}
     var onQuit: () -> Void = {}
+    @Environment(\.colorScheme) private var colorScheme
+    private var theme: PanelTheme { .from(colorScheme) }
 
     var body: some View {
         VStack(spacing: 16) {
@@ -149,7 +204,7 @@ struct PetPanelView: View {
             if let state = store.state {
                 Text("\(store.stage.name) · \(store.mood)")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color(white: 0.62))
+                    .foregroundStyle(theme.secondaryText)
 
                 PixelSpriteView(
                     rows: Sprites.rows(
@@ -161,7 +216,9 @@ struct PetPanelView: View {
                         ),
                         frame: store.animFrame
                     ),
-                    bodyColor: store.bodyColor
+                    bodyColor: store.bodyColor,
+                    outlineColor: theme.spriteOutline,
+                    mouthColor: theme.spriteMouth
                 )
                 .padding(.vertical, 4)
 
@@ -174,12 +231,12 @@ struct PetPanelView: View {
                     let (pct, _) = PetLogic.evolveProgress(tokens: state.lifetimeTokens, stage: store.stage)
                     Text("EVO \(pct)% · \(PetLogic.formatTokens(state.lifetimeTokens)) / \(PetLogic.formatTokens(next.minTokens))")
                         .font(.system(size: 10, design: .monospaced))
-                        .foregroundStyle(Color(white: 0.45))
+                        .foregroundStyle(theme.tertiaryText)
                 }
 
                 Text("\(state.name) · fed \(PetLogic.formatTokens(state.lifetimeTokens))")
                     .font(.system(size: 10))
-                    .foregroundStyle(Color(white: 0.40))
+                    .foregroundStyle(theme.faintText)
             } else {
                 Text("No pet found")
                     .foregroundStyle(.secondary)
@@ -198,7 +255,7 @@ struct PetPanelView: View {
         .frame(width: 240)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(Color(red: 0.16, green: 0.16, blue: 0.16))
+                .fill(theme.panelBackground)
         )
     }
 }
@@ -208,17 +265,19 @@ struct PanelButton: View {
     let systemImage: String
     let action: () -> Void
     @State private var hovering = false
+    @Environment(\.colorScheme) private var colorScheme
+    private var theme: PanelTheme { .from(colorScheme) }
 
     var body: some View {
         Button(action: action) {
             Label(title, systemImage: systemImage)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(Color(white: 0.82))
+                .foregroundStyle(theme.buttonText)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 7)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(white: hovering ? 0.26 : 0.18))
+                        .fill(theme.buttonBackground(hovering: hovering))
                 )
         }
         .buttonStyle(.plain)
@@ -228,6 +287,8 @@ struct PanelButton: View {
 
 struct UsageBalanceCard: View {
     let usage: UsageSnapshot?
+    @Environment(\.colorScheme) private var colorScheme
+    private var theme: PanelTheme { .from(colorScheme) }
 
     private func barColor(_ pct: Double) -> Color {
         if pct >= 0.9 { return Color(red: 0.95, green: 0.45, blue: 0.40) }
@@ -240,12 +301,12 @@ struct UsageBalanceCard: View {
             HStack {
                 Text("Usage")
                     .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(Color(white: 0.72))
+                    .foregroundStyle(theme.labelText)
                 Spacer()
                 if let plan = usage?.planName {
                     Text(plan)
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(Color(white: 0.45))
+                        .foregroundStyle(theme.tertiaryText)
                 }
             }
 
@@ -254,15 +315,15 @@ struct UsageBalanceCard: View {
 
                 (Text("\(pct)%")
                     .font(.system(size: 26, weight: .bold))
-                    .foregroundStyle(Color.white)
+                    .foregroundStyle(theme.primaryText)
                  + Text("  used")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color(white: 0.5)))
+                    .foregroundStyle(theme.mutedText))
 
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 4)
-                            .fill(Color(white: 0.22))
+                            .fill(theme.trackColor)
                         RoundedRectangle(cornerRadius: 4)
                             .fill(barColor(fraction))
                             .frame(width: max(4, geo.size.width * fraction))
@@ -273,7 +334,7 @@ struct UsageBalanceCard: View {
                 if let reset = usage.resetText {
                     Text(reset)
                         .font(.system(size: 11))
-                        .foregroundStyle(Color(white: 0.5))
+                        .foregroundStyle(theme.mutedText)
                 }
             } else if let message = usage?.error, !message.isEmpty {
                 Text(message)
@@ -282,14 +343,14 @@ struct UsageBalanceCard: View {
             } else {
                 Text("Fetching from Cursor…")
                     .font(.system(size: 11))
-                    .foregroundStyle(Color(white: 0.45))
+                    .foregroundStyle(theme.tertiaryText)
             }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color(white: 0.12))
+                .fill(theme.cardBackground)
         )
         .help(usage?.detailLine ?? "Cursor usage")
     }
