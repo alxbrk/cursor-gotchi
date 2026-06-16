@@ -30,12 +30,16 @@ final class AppSettingsStore: ObservableObject {
     }
 
     func setUsageAlertsEnabled(_ enabled: Bool) {
-        settings.usageAlertsEnabled = enabled
+        var updated = settings
+        updated.usageAlertsEnabled = enabled
+        settings = updated
         save()
     }
 
     func setEvolutionAlertsEnabled(_ enabled: Bool) {
-        settings.evolutionAlertsEnabled = enabled
+        var updated = settings
+        updated.evolutionAlertsEnabled = enabled
+        settings = updated
         save()
     }
 
@@ -44,20 +48,24 @@ final class AppSettingsStore: ObservableObject {
         guard settings.usageAlertsEnabled else { return [] }
 
         let cycleKey = billingCycleEnd ?? "unknown"
-        if settings.alertCycleKey != cycleKey {
-            settings.alertCycleKey = cycleKey
-            settings.usageAlertsFired = []
+        var updated = settings
+        if updated.alertCycleKey != cycleKey {
+            updated.alertCycleKey = cycleKey
+            updated.usageAlertsFired = []
         }
 
         var newlyFired: [Int] = []
         for threshold in [70, 90] where usedPercent >= threshold {
-            if !settings.usageAlertsFired.contains(threshold) {
-                settings.usageAlertsFired.append(threshold)
+            if !updated.usageAlertsFired.contains(threshold) {
+                updated.usageAlertsFired.append(threshold)
                 newlyFired.append(threshold)
             }
         }
 
-        if !newlyFired.isEmpty { save() }
+        if !newlyFired.isEmpty || updated.alertCycleKey != settings.alertCycleKey {
+            settings = updated
+            save()
+        }
         return newlyFired
     }
 

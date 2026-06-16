@@ -45,6 +45,12 @@ struct PanelTheme {
     var spriteMouth: Color {
         isDark ? Color(white: 0.55) : Color(red: 0.29, green: 0.19, blue: 0.19)
     }
+    var windowBorder: Color {
+        isDark ? Color.white.opacity(0.10) : Color.black.opacity(0.08)
+    }
+    var chromeBackground: Color {
+        isDark ? Color(white: 0.14) : Color(white: 0.94)
+    }
 
     static func from(_ scheme: ColorScheme) -> PanelTheme {
         PanelTheme(isDark: scheme == .dark)
@@ -194,6 +200,7 @@ struct PetPanelView: View {
     @ObservedObject var usageStore: UsageStore
     @ObservedObject var settingsStore: AppSettingsStore
     var onRefresh: () -> Void = {}
+    var onClose: () -> Void = {}
     var onQuit: () -> Void = {}
     @State private var showSettings = false
     @State private var draftName = ""
@@ -201,17 +208,23 @@ struct PetPanelView: View {
     private var theme: PanelTheme { .from(colorScheme) }
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 16) {
-                panelContent
+        VStack(spacing: 0) {
+            PanelChromeHeader(title: "Cursor Gotchi", theme: theme, onClose: onClose)
+
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 16) {
+                    panelContent
+                }
+                .padding(20)
+                .frame(maxWidth: .infinity)
             }
-            .padding(20)
-            .frame(maxWidth: .infinity)
         }
-        .frame(width: 260, height: 420)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(theme.panelBackground)
+        .frame(width: 280, height: 460)
+        .background(theme.panelBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(theme.windowBorder, lineWidth: 1)
         )
         .onAppear {
             draftName = store.state?.name ?? "Toko"
@@ -272,6 +285,9 @@ struct PetPanelView: View {
                 settingsStore: settingsStore,
                 draftName: $draftName
             )
+            .onAppear {
+                draftName = store.state?.name ?? draftName
+            }
         }
 
         HStack(spacing: 8) {
@@ -291,6 +307,47 @@ struct PetPanelView: View {
             PanelButton(title: "Quit", systemImage: "power", action: onQuit)
         }
         .padding(.top, 4)
+    }
+}
+
+struct PanelChromeHeader: View {
+    let title: String
+    let theme: PanelTheme
+    let onClose: () -> Void
+    @State private var closeHovering = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(theme.primaryText)
+            Spacer()
+            Button(action: onClose) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(theme.secondaryText)
+                    .frame(width: 18, height: 18)
+                    .background(
+                        Circle()
+                            .fill(closeHovering ? theme.trackColor : Color.clear)
+                    )
+            }
+            .buttonStyle(.plain)
+            .onHover { closeHovering = $0 }
+            .help("Close window")
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 14)
+        .padding(.bottom, 10)
+        .background {
+            WindowDragArea()
+                .background(theme.chromeBackground)
+        }
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(theme.windowBorder)
+                .frame(height: 1)
+        }
     }
 }
 
@@ -336,16 +393,14 @@ struct SettingsCard: View {
                 Text("Name")
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(theme.tertiaryText)
-                TextField("Pet name", text: $draftName)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 13))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(theme.trackColor)
-                    )
-                    .onSubmit { store.updateName(draftName) }
+                HStack(spacing: 6) {
+                    MacTextField(text: $draftName, placeholder: "Pet name", onCommit: saveName)
+                        .frame(height: 24)
+                    Button("Save") { saveName() }
+                        .font(.system(size: 11, weight: .medium))
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                }
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -385,6 +440,11 @@ struct SettingsCard: View {
             RoundedRectangle(cornerRadius: 10)
                 .fill(theme.cardBackground)
         )
+    }
+
+    private func saveName() {
+        store.updateName(draftName)
+        draftName = store.state?.name ?? draftName
     }
 }
 
@@ -448,7 +508,7 @@ struct SettingsToggle: View {
             }
         }
         .toggleStyle(.switch)
-        .controlSize(.small)
+        .tint(Color(red: 0.35, green: 0.61, blue: 0.91))
     }
 }
 

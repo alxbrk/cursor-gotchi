@@ -43,7 +43,7 @@ final class PetStore: ObservableObject {
             checkEvolution(loaded)
             state = loaded
         } catch {
-            // Keep last good state if file is mid-write.
+            AppLogger.log("pet reload failed: \(error.localizedDescription)")
         }
     }
 
@@ -53,6 +53,7 @@ final class PetStore: ObservableObject {
         var current = state ?? defaultState()
         current.name = trimmed
         persistAndPublish(current)
+        AppLogger.log("pet renamed to \(trimmed)")
     }
 
     func updateSpecies(_ speciesID: String) {

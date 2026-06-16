@@ -173,22 +173,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         store.reload()
 
         if panelWindow == nil {
-            let panel = NSPanel(
+            let panel = KeyablePanel(
                 contentRect: NSRect(x: 0, y: 0, width: 280, height: 460),
-                styleMask: [.titled, .closable, .fullSizeContentView],
+                styleMask: [.borderless],
                 backing: .buffered,
                 defer: false
             )
-            panel.title = "Cursor Gotchi"
-            panel.titlebarAppearsTransparent = true
-            panel.titleVisibility = .visible
-            panel.isMovableByWindowBackground = true
+            panel.isMovableByWindowBackground = false
+            panel.becomesKeyOnlyIfNeeded = false
             panel.isReleasedWhenClosed = false
             panel.hidesOnDeactivate = false
             panel.level = .floating
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             panel.isOpaque = false
             panel.backgroundColor = .clear
+            panel.hasShadow = true
             panel.contentViewController = NSHostingController(rootView: panelView())
             panel.center()
             panelWindow = panel
@@ -224,6 +223,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     await self?.usageStore.refresh()
                     self?.store.reload()
                 }
+            },
+            onClose: { [weak self] in
+                self?.panelWindow?.orderOut(nil)
             },
             onQuit: { [weak self] in
                 self?.quitApp()
