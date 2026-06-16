@@ -28,7 +28,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         usageStore.startAutoRefresh(every: 60)
         observeUsageChanges()
         store.reload()
-        showPanel()
+        DispatchQueue.main.async { [weak self] in
+            self?.showPanel()
+        }
         AppLogger.log("Cursor Gotchi started — panel opened")
     }
 
@@ -172,24 +174,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if panelWindow == nil {
             let panel = NSPanel(
-                contentRect: NSRect(x: 0, y: 0, width: 300, height: 480),
+                contentRect: NSRect(x: 0, y: 0, width: 280, height: 460),
                 styleMask: [.titled, .closable, .fullSizeContentView],
                 backing: .buffered,
                 defer: false
             )
             panel.title = "Cursor Gotchi"
             panel.titlebarAppearsTransparent = true
+            panel.titleVisibility = .visible
             panel.isMovableByWindowBackground = true
+            panel.isReleasedWhenClosed = false
+            panel.hidesOnDeactivate = false
             panel.level = .floating
-            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .moveToActiveSpace]
+            panel.isOpaque = false
+            panel.backgroundColor = .clear
             panel.contentViewController = NSHostingController(rootView: panelView())
             panel.center()
             panelWindow = panel
-        } else {
-            panelWindow?.contentViewController = NSHostingController(rootView: panelView())
         }
 
-        panelWindow?.makeKeyAndOrderFront(nil)
+        guard let panel = panelWindow else { return }
+        if let hosting = panel.contentViewController as? NSHostingController<PetPanelView> {
+            hosting.rootView = panelView()
+        }
+        panel.setContentSize(NSSize(width: 280, height: 460))
+        if let screen = NSScreen.main {
+            let frame = panel.frame
+            let visible = screen.visibleFrame
+            var origin = panel.frame.origin
+            if !visible.contains(frame) {
+                origin.x = visible.midX - frame.width / 2
+                origin.y = visible.midY - frame.height / 2
+                panel.setFrameOrigin(origin)
+            }
+        }
+        panel.orderFrontRegardless()
+        panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 

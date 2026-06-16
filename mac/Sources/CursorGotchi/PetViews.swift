@@ -201,83 +201,14 @@ struct PetPanelView: View {
     private var theme: PanelTheme { .from(colorScheme) }
 
     var body: some View {
-        ScrollView {
+        ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 16) {
-                UsageBalanceCard(usage: usageStore.usage)
-
-                if let state = store.state {
-                    Text("\(store.stage.name) · \(store.mood)")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(theme.secondaryText)
-
-                    PixelSpriteView(
-                        rows: Sprites.rows(
-                            stage: store.stage.level,
-                            mood: Sprites.moodKey(
-                                hunger: state.hunger,
-                                happiness: state.happiness,
-                                mood: store.mood
-                            ),
-                            frame: store.animFrame
-                        ),
-                        bodyColor: store.bodyColor,
-                        outlineColor: theme.spriteOutline,
-                        mouthColor: theme.spriteMouth
-                    )
-                    .padding(.vertical, 4)
-
-                    VStack(spacing: 12) {
-                        StatBar(label: "HUN", value: state.hunger, tint: Color(red: 0.89, green: 0.58, blue: 0.30))
-                        StatBar(label: "HAP", value: state.happiness, tint: Color(red: 0.25, green: 0.64, blue: 0.40))
-                    }
-
-                    if let next = PetLogic.nextStage(after: store.stage) {
-                        let (pct, _) = PetLogic.evolveProgress(tokens: state.lifetimeTokens, stage: store.stage)
-                        Text("EVO \(pct)% · \(PetLogic.formatTokens(state.lifetimeTokens)) / \(PetLogic.formatTokens(next.minTokens))")
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundStyle(theme.tertiaryText)
-                    }
-
-                    Text("\(state.name) · fed \(PetLogic.formatTokens(state.lifetimeTokens))")
-                        .font(.system(size: 10))
-                        .foregroundStyle(theme.faintText)
-                } else {
-                    Text("No pet found")
-                        .foregroundStyle(.secondary)
-                    Text("Set a name below to create one")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
-
-                if showSettings {
-                    SettingsCard(
-                        store: store,
-                        settingsStore: settingsStore,
-                        draftName: $draftName
-                    )
-                }
-
-                HStack(spacing: 8) {
-                    PanelButton(
-                        title: showSettings ? "Hide" : "Settings",
-                        systemImage: "gearshape",
-                        action: {
-                            if showSettings {
-                                store.updateName(draftName)
-                            } else {
-                                draftName = store.state?.name ?? "Toko"
-                            }
-                            showSettings.toggle()
-                        }
-                    )
-                    PanelButton(title: "Refresh", systemImage: "arrow.clockwise", action: onRefresh)
-                    PanelButton(title: "Quit", systemImage: "power", action: onQuit)
-                }
-                .padding(.top, 4)
+                panelContent
             }
             .padding(20)
+            .frame(maxWidth: .infinity)
         }
-        .frame(width: 260)
+        .frame(width: 260, height: 420)
         .background(
             RoundedRectangle(cornerRadius: 14)
                 .fill(theme.panelBackground)
@@ -285,6 +216,81 @@ struct PetPanelView: View {
         .onAppear {
             draftName = store.state?.name ?? "Toko"
         }
+    }
+
+    @ViewBuilder
+    private var panelContent: some View {
+        UsageBalanceCard(usage: usageStore.usage)
+
+        if let state = store.state {
+            Text("\(store.stage.name) · \(store.mood)")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(theme.secondaryText)
+
+            PixelSpriteView(
+                rows: Sprites.rows(
+                    stage: store.stage.level,
+                    mood: Sprites.moodKey(
+                        hunger: state.hunger,
+                        happiness: state.happiness,
+                        mood: store.mood
+                    ),
+                    frame: store.animFrame
+                ),
+                bodyColor: store.bodyColor,
+                outlineColor: theme.spriteOutline,
+                mouthColor: theme.spriteMouth
+            )
+            .padding(.vertical, 4)
+
+            VStack(spacing: 12) {
+                StatBar(label: "HUN", value: state.hunger, tint: Color(red: 0.89, green: 0.58, blue: 0.30))
+                StatBar(label: "HAP", value: state.happiness, tint: Color(red: 0.25, green: 0.64, blue: 0.40))
+            }
+
+            if let next = PetLogic.nextStage(after: store.stage) {
+                let (pct, _) = PetLogic.evolveProgress(tokens: state.lifetimeTokens, stage: store.stage)
+                Text("EVO \(pct)% · \(PetLogic.formatTokens(state.lifetimeTokens)) / \(PetLogic.formatTokens(next.minTokens))")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(theme.tertiaryText)
+            }
+
+            Text("\(state.name) · fed \(PetLogic.formatTokens(state.lifetimeTokens))")
+                .font(.system(size: 10))
+                .foregroundStyle(theme.faintText)
+        } else {
+            Text("No pet found")
+                .foregroundStyle(.secondary)
+            Text("Set a name below to create one")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
+
+        if showSettings {
+            SettingsCard(
+                store: store,
+                settingsStore: settingsStore,
+                draftName: $draftName
+            )
+        }
+
+        HStack(spacing: 8) {
+            PanelButton(
+                title: showSettings ? "Hide" : "Settings",
+                systemImage: "gearshape",
+                action: {
+                    if showSettings {
+                        store.updateName(draftName)
+                    } else {
+                        draftName = store.state?.name ?? "Toko"
+                    }
+                    showSettings.toggle()
+                }
+            )
+            PanelButton(title: "Refresh", systemImage: "arrow.clockwise", action: onRefresh)
+            PanelButton(title: "Quit", systemImage: "power", action: onQuit)
+        }
+        .padding(.top, 4)
     }
 }
 
