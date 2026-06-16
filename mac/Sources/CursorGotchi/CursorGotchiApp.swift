@@ -6,6 +6,7 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let store = PetStore()
     private let usageStore = UsageStore()
+    private let settingsStore = AppSettingsStore()
     private var statusItem: NSStatusItem!
     private var statusHostingView: NSHostingView<StatusBarLabel>?
     private var panelWindow: NSPanel?
@@ -20,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil
         )
         NSApp.setActivationPolicy(.accessory)
+        store.settingsStore = settingsStore
         store.requestNotifications()
         setupStatusItem()
         setupRefreshTimer()
@@ -82,7 +84,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if let label = usage?.menuLabel {
                     self?.statusItem.length = max(72, CGFloat(28 + label.count * 7))
                 }
+                self?.checkUsageAlerts(usage)
             }
+        }
+    }
+
+    private func checkUsageAlerts(_ usage: UsageSnapshot?) {
+        guard let usage, let pct = usage.usedPercent else { return }
+        let fired = settingsStore.recordUsageAlertIfNeeded(
+            usedPercent: pct,
+            billingCycleEnd: usage.billingCycleEnd
+        )
+        for threshold in fired {
+            NotificationService.postUsageAlert(
+                threshold: threshold,
+                usedPercent: pct,
+                resetText: usage.resetText
+            )
+            AppLogger.log("usage alert fired at \(threshold)% (current: \(pct)%)")
         }
     }
 
@@ -153,7 +172,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if panelWindow == nil {
             let panel = NSPanel(
-                contentRect: NSRect(x: 0, y: 0, width: 280, height: 400),
+                contentRect: NSRect(x: 0, y: 0, width: 300, height: 480),
                 styleMask: [.titled, .closable, .fullSizeContentView],
                 backing: .buffered,
                 defer: false
@@ -178,6 +197,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         PetPanelView(
             store: store,
             usageStore: usageStore,
+            settingsStore: settingsStore,
             onRefresh: { [weak self] in
                 Task { @MainActor in
                     await self?.usageStore.refresh()

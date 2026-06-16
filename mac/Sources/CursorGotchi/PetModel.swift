@@ -29,7 +29,23 @@ struct StageInfo {
     let minTokens: Int
 }
 
+struct SpeciesInfo: Identifiable {
+    let id: String
+    let name: String
+    let emoji: String
+    let trait: String
+}
+
 enum PetLogic {
+    static let species: [SpeciesInfo] = [
+        .init(id: "sparkite", name: "Sparkite", emoji: "⚡", trait: "Loves fast completions"),
+        .init(id: "deepite", name: "Deepite", emoji: "🌊", trait: "Thrives on long context"),
+        .init(id: "codite", name: "Codite", emoji: "💎", trait: "Evolves through edits"),
+        .init(id: "shellite", name: "Shellite", emoji: "🔥", trait: "Powered by terminal runs"),
+        .init(id: "mcpite", name: "MCPite", emoji: "🔗", trait: "Connects to everything"),
+    ]
+
+    static let defaultSpecies = "sparkite"
     static let stages: [StageInfo] = [
         .init(level: 0, name: "Egg", minTokens: 0),
         .init(level: 1, name: "Hatchling", minTokens: 5_000),

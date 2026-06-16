@@ -5,9 +5,10 @@ __pycache__/
 .env
 .venv/
 
-# Runtime state (personal — pet data, usage, tokens, logs)
+# Runtime state (personal — pet data, usage, tokens, logs, preferences)
 state.json
 usage.json
+settings.json
 *.log
 
 # Swift / Xcode build artifacts

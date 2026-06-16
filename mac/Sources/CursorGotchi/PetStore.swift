@@ -1,6 +1,5 @@
 import Foundation
 import SwiftUI
-import UserNotifications
 
 @MainActor
 final class PetStore: ObservableObject {
@@ -9,6 +8,7 @@ final class PetStore: ObservableObject {
 
     private let stateURL: URL
     private var lastStageLevel: Int?
+    weak var settingsStore: AppSettingsStore?
 
     init() {
         stateURL = FileManager.default.homeDirectoryForCurrentUser
@@ -27,7 +27,7 @@ final class PetStore: ObservableObject {
     }
 
     var bodyColor: Color {
-        PetLogic.speciesColors[state?.species ?? "deepite"] ?? .blue
+        PetLogic.speciesColors[state?.species ?? PetLogic.defaultSpecies] ?? .blue
     }
 
     func reload() {
@@ -47,7 +47,49 @@ final class PetStore: ObservableObject {
         }
     }
 
+    func updateName(_ name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        var current = state ?? defaultState()
+        current.name = trimmed
+        persistAndPublish(current)
+    }
+
+    func updateSpecies(_ speciesID: String) {
+        guard PetLogic.species.contains(where: { $0.id == speciesID }) else { return }
+        var current = state ?? defaultState()
+        current.species = speciesID
+        persistAndPublish(current)
+    }
+
+    private func defaultState() -> PetStateFile {
+        let now = ISO8601DateFormatter.flex.string(from: .now)
+        return PetStateFile(
+            name: "Toko",
+            species: PetLogic.defaultSpecies,
+            lifetimeTokens: 0,
+            sessionTokens: 0,
+            hunger: 80,
+            happiness: 80,
+            lastFedAt: now,
+            lastSeenAt: now,
+            mealsServed: 0,
+            evolutions: 0
+        )
+    }
+
+    private func persistAndPublish(_ state: PetStateFile) {
+        do {
+            try persist(state)
+            self.state = state
+        } catch {
+            AppLogger.log("pet save failed: \(error.localizedDescription)")
+        }
+    }
+
     private func persist(_ state: PetStateFile) throws {
+        let dir = stateURL.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(state)
@@ -58,22 +100,14 @@ final class PetStore: ObservableObject {
         let level = PetLogic.stage(for: state.lifetimeTokens).level
         defer { lastStageLevel = level }
         guard let last = lastStageLevel, level > last else { return }
+        guard settingsStore?.settings.evolutionAlertsEnabled ?? true else { return }
         let stageName = PetLogic.stage(for: state.lifetimeTokens).name
-        let content = UNMutableNotificationContent()
-        content.title = "Cursor Gotchi evolved!"
-        content.subtitle = stageName
-        content.body = "\(state.name) reached \(stageName)"
-        let request = UNNotificationRequest(
-            identifier: UUID().uuidString,
-            content: content,
-            trigger: nil
-        )
-        UNUserNotificationCenter.current().add(request)
+        NotificationService.postEvolution(name: state.name, stageName: stageName)
     }
 }
 
 extension PetStore {
     func requestNotifications() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        NotificationService.requestAuthorization()
     }
 }
