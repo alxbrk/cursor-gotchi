@@ -186,7 +186,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             panel.isReleasedWhenClosed = false
             panel.hidesOnDeactivate = false
             panel.level = .floating
-            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .moveToActiveSpace]
+            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             panel.isOpaque = false
             panel.backgroundColor = .clear
             panel.contentViewController = NSHostingController(rootView: panelView())
